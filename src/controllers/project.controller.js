@@ -122,10 +122,13 @@ res.status(500).json({ message: 'Failed to fetch your posts', error: err.message
 
 //get post logged in user requested to join
 export const getMyJoinRequests = async (req, res) => {
+  console.log("🔍 Fetching join requests for:", req.user?.id);
 try {
 const projects = await Project.find({ 'joinRequests.user': req.user.id })
 .populate('createdBy', 'name email')
 .sort({ createdAt: -1 });
+
+res.status(200).json(projects); 
 
 } catch (err) {
 res.status(500).json({ message: 'Failed to fetch join requests', error: err.message });
