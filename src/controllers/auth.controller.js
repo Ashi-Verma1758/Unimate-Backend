@@ -13,12 +13,6 @@ const generateAccessToken = (userId) => {
 const generateRefreshToken = (userId) => {
   return jwt.sign({ id: userId }, REFRESH_SECRET, { expiresIn: '10d' });
 };
-// //Generate JWT token
-// const generateToken = (userId) => {
-//   return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '10d' });
-// };
-
-//register new user
 export const registerUser = async (req, res) => {
   try {
     const { name, email, phone, dob, password } = req.body;
@@ -30,7 +24,7 @@ export const registerUser = async (req, res) => {
 
     // Create new user
    const refreshToken = generateRefreshToken(); // call first
-const newUser = new User({ name, email, phone, dob, password, refreshToken });
+const newUser = new User({ name, email, phone, dob, password, refreshToken ,role:'user'});
 await newUser.save();
 const accessToken = generateAccessToken(newUser._id);
 
@@ -42,7 +36,8 @@ const accessToken = generateAccessToken(newUser._id);
         name: newUser.name,
         email: newUser.email,
         phone: newUser.phone,
-        dob: newUser.dob
+        dob: newUser.dob,
+        role:newUser.role
       },
       accessToken,
   refreshToken

@@ -1,5 +1,6 @@
 import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
+import Conversation from '../models/conversation.model.js'; 
 //creating post
 export const createProject = async (req, res) => {
   try {
@@ -102,6 +103,21 @@ export const respondToRequest = async (req, res) => {
 
     request.status = status;
     await project.save();
+
+    //create conv if accepted
+    if (status === 'accepted') {
+      const existingConversation = await Conversation.findOne({
+        members: { $all: [req.user._id, userId] },
+        project: projectId
+      });
+
+      if (!existingConversation) {
+        await Conversation.create({
+          members: [req.user._id, userId],
+          project: projectId
+        });
+      }
+    }
 
     res.status(200).json({ message: `Request has been ${status}` });
   } catch (err) {
