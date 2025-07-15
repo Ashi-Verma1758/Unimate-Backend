@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'yourStrongSecretKey';
 
 //Generate JWT token
 const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '10d' });
 };
 
 //register new user
@@ -36,8 +36,11 @@ export const registerUser = async (req, res) => {
       },
       token
     });
+
   } catch (err) {
+
     res.status(500).json({ message: 'Failed to register user', error: err.message });
+    
   }
 };
 
@@ -69,7 +72,9 @@ export const loginUser = async (req, res) => {
       },
       token
     });
-  } catch (err) {
+
+} catch (err) {
+
     res.status(500).json({ message: 'Failed to login', error: err.message });
   }
 };

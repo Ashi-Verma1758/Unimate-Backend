@@ -1,14 +1,16 @@
 import express from 'express'; //d
 import cors from "cors";//d
 import dotenv from 'dotenv';
+dotenv.config();
+
 import cookieParser from 'cookie-parser'; //d
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import projectRoutes from './routes/project.routes.js';
+import eventRoutes from './routes/event.routes.js'
 const app = express();//d
 
 
-dotenv.config();
 app.use(express.json());
 // app.use(cookieParser());
 
@@ -27,7 +29,7 @@ app.use(cookieParser())
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
-
+app.use('/api/events', eventRoutes);
 //routes
 
 

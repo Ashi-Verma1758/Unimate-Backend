@@ -1,30 +1,33 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'yourStrongSecretKey';
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Middleware to protect routes
 export const protect = async (req, res, next) => {
   let token;
 
-  // Check if token exists in Authorization header
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
+    req.headers.authorization.startsWith('Bearer ')
   ) {
-    try {
-      token = req.headers.authorization.split(' ')[1]; // Remove "Bearer "
+    token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
+    try {
+      // Debug log — optional
+      // console.log('🔐 Received Token:', token);
+      // console.log('🧪 JWT_SECRET:', JWT_SECRET);
+
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Attach user info to req
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
 
-      if (!req.user) return res.status(401).json({ message: 'User not found' });
-
-      next(); // Move to the next route/controller
+      req.user = user;
+      next();
     } catch (error) {
+      console.error('❌ JWT Error:', error.message);
       return res.status(401).json({ message: 'Token invalid or expired' });
     }
   } else {
