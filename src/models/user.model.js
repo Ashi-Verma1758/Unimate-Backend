@@ -29,6 +29,12 @@ const userSchema=new mongoose.Schema({
     minlength: 6
   },
 
+  linkedin: String,
+  github: String,
+  college: String,
+  skills: [String],
+  currentYear: String,
+
   createdAt: {
     type: Date,
     default: Date.now
