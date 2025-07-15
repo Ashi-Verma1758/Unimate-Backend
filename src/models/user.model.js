@@ -35,6 +35,8 @@ const userSchema=new mongoose.Schema({
   skills: [String],
   currentYear: String,
 
+  refreshToken: { type: String },
+
   createdAt: {
     type: Date,
     default: Date.now
