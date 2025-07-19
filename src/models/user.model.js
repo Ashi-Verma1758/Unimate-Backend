@@ -2,10 +2,9 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
 const userSchema=new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+
      email: {
     type: String,
     required: true,
@@ -13,16 +12,19 @@ const userSchema=new mongoose.Schema({
     lowercase: true
   },
 
-  phone: {
-    type: String,
-    required: true,
+  university: { type: String, required: true },
+
+  academicYear:{
+    type:String,
+    enum: ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'],
+    required:true
   },
 
-  dob: {
-    type: Date,
-    required: true
-  },
-
+  major: { type: String },
+  // phone: {
+  //   type: String,
+  //   required: true,
+  // },
   password: {
     type: String,
     required: true,
@@ -38,7 +40,6 @@ const userSchema=new mongoose.Schema({
   github: String,
   college: String,
   skills: [String],
-  currentYear: String,
 
   refreshToken: { type: String },
 

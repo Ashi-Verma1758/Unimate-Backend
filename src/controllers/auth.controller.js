@@ -13,55 +13,123 @@ const generateAccessToken = (userId) => {
 const generateRefreshToken = (userId) => {
   return jwt.sign({ id: userId }, REFRESH_SECRET, { expiresIn: '10d' });
 };
+// export const registerUser = async (req, res) => {
+//   try {
+//     const { firstName, lastName, email, university, academicYear, major, password} = req.body;
+
+//     // Check if user already exists
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser)
+//       return res.status(400).json({ message: 'User already exists' });
+
+//     // Create new user
+//   //  const refreshToken = generateRefreshToken(); // call first
+//    const newUser = new User({ firstName, lastName, email, university, academicYear, major, password, refreshToken ,role:'user'});
+//    await newUser.save();
+// const refreshToken = generateRefreshToken(newUser._id);
+//     const accessToken = generateAccessToken(newUser._id);
+  
+
+//     res.status(201).json({
+//       message: 'User registered successfully',
+//       user: {
+//         id: newUser._id,
+//         firstName: newUser.firstName,
+//         lastName: newUser.lastName,
+//         email: newUser.email,
+//         university: newUser.university,
+//         academicYear: newUser.academicYear,
+//         role:newUser.role
+//       },
+//       accessToken,
+//   refreshToken
+//     });
+
+//   } catch (err) {
+
+//     res.status(500).json({ message: 'Failed to register user', error: err.message });
+    
+//   }
+// };
+
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, phone, dob, password } = req.body;
+    const { firstName, lastName, email, university, academicYear, major, password } = req.body;
 
-    // Check if user already exists
+    // Check for existing user
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: 'User already exists' });
 
-    // Create new user
-   const refreshToken = generateRefreshToken(); // call first
-const newUser = new User({ name, email, phone, dob, password, refreshToken ,role:'user'});
-await newUser.save();
-const accessToken = generateAccessToken(newUser._id);
+    // Step 1: Create user without refreshToken
+    const newUser = new User({
+      firstName,
+      lastName,
+      email,
+      university,
+      academicYear,
+      major,
+      password,
+      role: 'user'
+    });
 
+    await newUser.save(); // now newUser._id is available
+
+    // Step 2: Now generate refresh token using newUser._id
+    const refreshToken = generateRefreshToken(newUser._id);
+    const accessToken = generateAccessToken(newUser._id);
+
+    // Step 3: Update user with refreshToken
+    newUser.refreshToken = refreshToken;
+    await newUser.save();
 
     res.status(201).json({
       message: 'User registered successfully',
       user: {
         id: newUser._id,
-        name: newUser.name,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         email: newUser.email,
-        phone: newUser.phone,
-        dob: newUser.dob,
-        role:newUser.role
+        university: newUser.university,
+        academicYear: newUser.academicYear,
+        role: newUser.role
       },
       accessToken,
-  refreshToken
+      refreshToken
     });
 
   } catch (err) {
-
     res.status(500).json({ message: 'Failed to register user', error: err.message });
-    
   }
 };
 
+
 //login user
 export const loginUser = async (req, res) => {
+  console.log("⚡ Login route hit");
+
   try {
     const { email, password } = req.body;
-
+console.log("➡️ Email:", email);
+  console.log("➡️ Password:", password);
     // Find user by email
+    const users = await User.find({}, 'email');
+console.log("🔎 Emails in DB:", users.map(u => u.email));
+
     const user = await User.findOne({ email });
+    console.log("🔍 Found user:", user);
     if (!user)
       return res.status(400).json({ message: 'Invalid email or password' });
 
+    console.log("🔍 Email:", email);
+console.log("🔍 Password:", password);
+console.log("🔎 Found User:", user);
+console.log("🔐 Stored Hash:", user.password);
+console.log("🔐 Comparing with:", password);
+
     // Compare password
     const isMatch = await user.comparePassword(password);
+    console.log("🔐 Password match?", isMatch);
     if (!isMatch)
       return res.status(400).json({ message: 'Invalid email or password' });
 
@@ -75,10 +143,10 @@ const accessToken = generateAccessToken(user._id);
       message: 'Login successful',
       user: {
         id: user._id,
-        name: user.name,
+        name: `${user.firstName} ${user.lastName}`,
+
         email: user.email,
-        phone: user.phone,
-        dob: user.dob
+        role: user.role
       },
       accessToken,
   refreshToken

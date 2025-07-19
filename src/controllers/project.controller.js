@@ -4,17 +4,44 @@ import Conversation from '../models/conversation.model.js';
 //creating post
 export const createProject = async (req, res) => {
   try {
-    const { eventName, description, image, deadline, teamSize } = req.body;
+    const {
+    title,
+    description,
+    domain,
+    projectType,
+    requiredSkills,
+    niceToHaveSkills,
+    timeCommitment,
+    projectDuration,
+    teamSize,
+    location,
+    startDate,
+    applicationDeadline,
+    remote,
+    githubRepo,
+    figmaLink,
+    demoLink
+  } = req.body;
 
-    const newProject = new Project({
-      createdBy: req.user.id,
-      eventName,
-      description,
-      image,
-      deadline,
-      teamSize
-    });
-
+  const project = await Project.create({
+    title,
+    description,
+    domain,
+    projectType,
+    requiredSkills,
+    niceToHaveSkills,
+    timeCommitment,
+    projectDuration,
+    teamSize,
+    location,
+    startDate,
+    applicationDeadline,
+    remote,
+    githubRepo,
+    figmaLink,
+    demoLink,
+    createdBy: req.user._id
+  });
     await newProject.save();
     res.status(201).json({ message: 'Project post created successfully', project: newProject });
   } catch (err) {

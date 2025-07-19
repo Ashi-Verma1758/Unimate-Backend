@@ -1,6 +1,6 @@
 import Event from '../models/event.model.js';
 import {uploadOnCloudinary} from '../utils/cloudinary.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import asyncHandler from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 
