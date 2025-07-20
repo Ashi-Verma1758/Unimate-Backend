@@ -27,7 +27,7 @@ title: {
       required: true },
       projectType: {
       type: String,
-      enum: ['Academic Project', 'Hackathon', 'Startup', 'StarUp Idea', 'Research Project', 'Open Source', 'Competition', 'Other'],
+      enum: ['Academic Project', 'Hackathon', 'Startup', 'Startup Idea', 'Research Project', 'Open Source', 'Competition', 'Other'],
       required: true 
       },
 

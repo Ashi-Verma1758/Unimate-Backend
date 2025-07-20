@@ -23,7 +23,7 @@ export const createProject = async (req, res) => {
     demoLink
   } = req.body;
 
-  const project = await Project.create({
+  const newProject = await Project.create({
     title,
     description,
     domain,
@@ -42,7 +42,7 @@ export const createProject = async (req, res) => {
     demoLink,
     createdBy: req.user._id
   });
-    await newProject.save();
+    // await newProject.save();
     res.status(201).json({ message: 'Project post created successfully', project: newProject });
   } catch (err) {
     res.status(500).json({ message: 'Failed to create project', error: err.message });
