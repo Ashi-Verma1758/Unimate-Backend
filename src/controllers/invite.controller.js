@@ -1,13 +1,13 @@
 import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
-// import ApiError from '../utils/apiError.js';
-// import { ApiResponse } from '../utils/apiResponse.js';
+import ApiError from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 
 //send invite to user for project
 export const sendTeamInvite = asyncHandler(async (req, res) => {
-const { projectId } = req.params;
-const { userId } = req.body;
+const { projectId, userId } = req.params;
+// const { userId } = req.body;
 
 const project = await Project.findById(projectId);
 if (!project) return res.status(404).json({ message: 'Project not found' });
@@ -90,4 +90,20 @@ export const getSentRequests = asyncHandler(async (req, res) => {
   }));
 
   res.status(200).json(new ApiResponse(200, sentRequests));
+});
+
+export const getTeamMembers = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+
+  const project = await Project.findById(projectId)
+    .populate('invitedMembers', 'firstName lastName email university')
+    .exec();
+
+  if (!project) {
+    return res.status(404).json({ message: 'Project not found' });
+  }
+
+  res.status(200).json({
+    team: project.invitedMembers
+  });
 });

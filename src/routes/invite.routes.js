@@ -15,4 +15,5 @@ router.put('/respond/:projectId/:userId', protect, respondToInvite); // Accept o
 router.get('/received', protect, getReceivedInvites); // Received invites for user
 router.get('/sent/:projectId', protect, getSentRequests); // Sent invites by creator
 
+
 export default router;

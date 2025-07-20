@@ -61,7 +61,7 @@ title: {
      required:true
      }, 
   teamSize: {
-     type: Number,
+     type: String,
      enum:[
       '1-2 people',
       '2-3 people',

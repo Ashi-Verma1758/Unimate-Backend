@@ -7,13 +7,17 @@ const conversationSchema = new mongoose.Schema({
   project: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project',
-    required: false // optional: if chat is linked to a project
+    required: false 
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  lastMessage: {
+    type: String,
+    default: ''
   }
-});
+  },
+  {
+   timestamps: true 
+  }
+); 
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 export default Conversation;

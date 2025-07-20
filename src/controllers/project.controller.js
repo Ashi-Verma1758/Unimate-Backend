@@ -63,19 +63,42 @@ export const getAllProjects = async (req, res) => {
 };
 
 //get project by Id
+// export const getProjectById = async (req, res) => {
+//   try {
+//     const project = await Project.findById(req.params.id)
+//       .populate('createdBy', 'name email')
+//       .populate('joinRequests.user', 'name email');
+
+//     if (!project) return res.status(404).json({ message: 'Project not found' });
+
+//     res.status(200).json(project);
+//   } catch (err) {
+//     res.status(500).json({ message: 'Failed to fetch project', error: err.message });
+//   }
+// };
+
 export const getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('createdBy', 'name email')
-      .populate('joinRequests.user', 'name email');
+      .populate('createdBy', 'firstName lastName email')
+      .populate('joinRequests.user', 'firstName lastName email ') 
 
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    res.status(200).json(project);
+    // Filter accepted members
+    const teamMembers = project.joinRequests
+      .filter(r => r.status === 'accepted')
+      .map(r => r.user);
+
+    res.status(200).json({
+      ...project.toObject(),
+      teamMembers // ⬅️ include in response
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch project', error: err.message });
   }
 };
+
 
 //joining a project like i'm interested
 export const joinProject = async (req, res) => {
