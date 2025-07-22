@@ -1,8 +1,8 @@
-import dotenv from "dotenv";
-dotenv.config({
-    path: './env'
-});
+import dotenv from 'dotenv';
+dotenv.config(); // Ensure this is at the very top!
 
+console.log('🔐 ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET);
+console.log('🔐 REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET);
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants.js";
 import connectDB from "./db/index.js";

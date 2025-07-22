@@ -2,55 +2,18 @@ import User from '../models/user.model.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-// const JWT_SECRET = process.env.JWT_SECRET || 'yourStrongSecretKey';
+
 const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET || 'accessSecretKey';
 const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refreshSecretKey';
-
 const generateAccessToken = (userId) => {
+  console.log('✅ Generating access token for user:', userId);
   return jwt.sign({ id: userId }, ACCESS_SECRET, { expiresIn: '1d' });
 };
 
 const generateRefreshToken = (userId) => {
+  console.log('✅ Generating refresh token for user:', userId);
   return jwt.sign({ id: userId }, REFRESH_SECRET, { expiresIn: '10d' });
 };
-// export const registerUser = async (req, res) => {
-//   try {
-//     const { firstName, lastName, email, university, academicYear, major, password} = req.body;
-
-//     // Check if user already exists
-//     const existingUser = await User.findOne({ email });
-//     if (existingUser)
-//       return res.status(400).json({ message: 'User already exists' });
-
-//     // Create new user
-//   //  const refreshToken = generateRefreshToken(); // call first
-//    const newUser = new User({ firstName, lastName, email, university, academicYear, major, password, refreshToken ,role:'user'});
-//    await newUser.save();
-// const refreshToken = generateRefreshToken(newUser._id);
-//     const accessToken = generateAccessToken(newUser._id);
-  
-
-//     res.status(201).json({
-//       message: 'User registered successfully',
-//       user: {
-//         id: newUser._id,
-//         firstName: newUser.firstName,
-//         lastName: newUser.lastName,
-//         email: newUser.email,
-//         university: newUser.university,
-//         academicYear: newUser.academicYear,
-//         role:newUser.role
-//       },
-//       accessToken,
-//   refreshToken
-//     });
-
-//   } catch (err) {
-
-//     res.status(500).json({ message: 'Failed to register user', error: err.message });
-    
-//   }
-// };
 
 export const registerUser = async (req, res) => {
   try {

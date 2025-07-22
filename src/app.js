@@ -1,12 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config(); // Load env first
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+
 import fileUpload from 'express-fileupload';
 import cookieParser from 'cookie-parser';
-
-
-dotenv.config(); // Load env first
-
 const app = express(); // ✅ Declare app first
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.url}`);

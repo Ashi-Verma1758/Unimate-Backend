@@ -12,14 +12,13 @@ export const protect = async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer ')
   ) {
     token = req.headers.authorization.split(' ')[1];
-
+console.log('🔐 Incoming token:', token);
+console.log('🔐 Access Secret:', process.env.ACCESS_TOKEN_SECRET);
     try {
-      // Debug log — optional
-      // console.log('🔐 Received Token:', token);
-      // console.log('🧪 JWT_SECRET:', JWT_SECRET);
+     
 
-      const decoded = jwt.verify(token, ACCESS_SECRET);
-
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+console.log("Decoded token:", decoded);
       const user = await User.findById(decoded.id).select('-password');
       if (!user) {
         return res.status(401).json({ message: 'User not found' });
