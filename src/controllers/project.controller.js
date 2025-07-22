@@ -1,20 +1,48 @@
 import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
+import Conversation from '../models/conversation.model.js'; 
 //creating post
 export const createProject = async (req, res) => {
   try {
-    const { eventName, description, image, deadline, teamSize } = req.body;
+    const {
+    title,
+    description,
+    domain,
+    projectType,
+    requiredSkills,
+    niceToHaveSkills,
+    timeCommitment,
+    projectDuration,
+    teamSize,
+    location,
+    startDate,
+    applicationDeadline,
+    remote,
+    githubRepo,
+    figmaLink,
+    demoLink
+  } = req.body;
 
-    const newProject = new Project({
-      createdBy: req.user.id,
-      eventName,
-      description,
-      image,
-      deadline,
-      teamSize
-    });
-
-    await newProject.save();
+  const newProject = await Project.create({
+    title,
+    description,
+    domain,
+    projectType,
+    requiredSkills,
+    niceToHaveSkills,
+    timeCommitment,
+    projectDuration,
+    teamSize,
+    location,
+    startDate,
+    applicationDeadline,
+    remote,
+    githubRepo,
+    figmaLink,
+    demoLink,
+    createdBy: req.user._id
+  });
+    // await newProject.save();
     res.status(201).json({ message: 'Project post created successfully', project: newProject });
   } catch (err) {
     res.status(500).json({ message: 'Failed to create project', error: err.message });
@@ -35,19 +63,42 @@ export const getAllProjects = async (req, res) => {
 };
 
 //get project by Id
+// export const getProjectById = async (req, res) => {
+//   try {
+//     const project = await Project.findById(req.params.id)
+//       .populate('createdBy', 'name email')
+//       .populate('joinRequests.user', 'name email');
+
+//     if (!project) return res.status(404).json({ message: 'Project not found' });
+
+//     res.status(200).json(project);
+//   } catch (err) {
+//     res.status(500).json({ message: 'Failed to fetch project', error: err.message });
+//   }
+// };
+
 export const getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('createdBy', 'name email')
-      .populate('joinRequests.user', 'name email');
+      .populate('createdBy', 'firstName lastName email')
+      .populate('joinRequests.user', 'firstName lastName email ') 
 
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    res.status(200).json(project);
+    // Filter accepted members
+    const teamMembers = project.joinRequests
+      .filter(r => r.status === 'accepted')
+      .map(r => r.user);
+
+    res.status(200).json({
+      ...project.toObject(),
+      teamMembers // ⬅️ include in response
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch project', error: err.message });
   }
 };
+
 
 //joining a project like i'm interested
 export const joinProject = async (req, res) => {
@@ -102,6 +153,21 @@ export const respondToRequest = async (req, res) => {
 
     request.status = status;
     await project.save();
+
+    //create conv if accepted
+    if (status === 'accepted') {
+      const existingConversation = await Conversation.findOne({
+        members: { $all: [req.user._id, userId] },
+        project: projectId
+      });
+
+      if (!existingConversation) {
+        await Conversation.create({
+          members: [req.user._id, userId],
+          project: projectId
+        });
+      }
+    }
 
     res.status(200).json({ message: `Request has been ${status}` });
   } catch (err) {

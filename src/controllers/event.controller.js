@@ -1,16 +1,25 @@
 import Event from '../models/event.model.js';
 import {uploadOnCloudinary} from '../utils/cloudinary.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import asyncHandler from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 
 export const createEvent = asyncHandler(async (req, res) => {
+  console.log("📥 Incoming request body:", req.body);
+  console.log("🖼️ Incoming file object:", req.files?.image);
   const { title, description, date } = req.body;
 
   let imageUrl = '';
   if (req.files && req.files.image) {
-    const upload = await uploadOnCloudinary(req.files.image.tempFilePath);
-    imageUrl = upload.secure_url;
+    const imageFile = req.files.image;
+
+    console.log("🧪 Attempting Cloudinary upload for:", imageFile.name);
+    const upload = await uploadOnCloudinary(imageFile.tempFilePath);
+   if (!upload || !upload.secure_url) {
+ console.log("❌ Upload failed or no secure_url in response:", upload);
+    return res.status(400).json({ message: 'Image upload failed' });
+}
+imageUrl = upload.secure_url;
   }
 
   const event = await Event.create({
