@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 
-const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET || 'accessSecretKey';
+// const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET || 'accessSecretKey';
 
 
 export const protect = async (req, res, next) => {

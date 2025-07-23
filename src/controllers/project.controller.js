@@ -101,6 +101,7 @@ export const getProjectById = async (req, res) => {
 
 
 //joining a project like i'm interested
+// In project.controller.js
 export const joinProject = async (req, res) => {
   try {
     const { message } = req.body;
@@ -108,9 +109,15 @@ export const joinProject = async (req, res) => {
 
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
+    // IMPORTANT: Ensure req.user._id is available here.
+    // If req.user is correctly set by 'protect', then req.user._id will exist.
+    if (!req.user || !req.user._id) {
+        return res.status(401).json({ message: 'Authentication required: User ID not found on request.' });
+    }
+
     // Prevent duplicate requests
     const alreadyRequested = project.joinRequests.find(
-      (reqObj) => reqObj.user.toString() === req.user.id
+      (reqObj) => reqObj.user.toString() === req.user._id.toString() // Use _id consistently
     );
     if (alreadyRequested) {
       return res.status(400).json({ message: 'You have already requested to join this project' });
@@ -118,7 +125,7 @@ export const joinProject = async (req, res) => {
 
     // Add join request
     project.joinRequests.push({
-      user: req.user.id,
+      user: req.user._id, // Use _id consistently
       message,
       status: 'pending'
     });
@@ -126,7 +133,10 @@ export const joinProject = async (req, res) => {
     await project.save();
     res.status(200).json({ message: 'Join request sent successfully' });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to send request', error: err.message });
+    // Log the actual error on the server side for debugging
+    console.error('Error in joinProject controller:', err);
+    // Send a generic 500 error to the client, but log details on server
+    res.status(500).json({ message: 'Failed to send request due to an internal server error.', error: err.message });
   }
 };
 
