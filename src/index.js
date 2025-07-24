@@ -1,14 +1,19 @@
 import dotenv from 'dotenv';
-dotenv.config(); // Ensure this is at the very top!
-
-console.log('🔐 ACCESS_TOKEN_SECRET:', process.env.ACCESS_TOKEN_SECRET);
-console.log('🔐 REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET);
+dotenv.config(); 
+// This log should now show the correct value
+console.log('--- DEBUGGING: process.env.ACCESS_TOKEN_SECRET immediately after dotenv.config() in index.js:', process.env.ACCESS_TOKEN_SECRET);
+import { app } from "./app.js"
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants.js";
 import connectDB from "./db/index.js";
-import { app } from "./app.js"
+
 import http from 'http';
 import { Server } from 'socket.io';
+// Import the initializer function
+import { initializeJwtSecrets } from './config/jwt.config.js'; // Adjust path if needed
+initializeJwtSecrets(process.env.ACCESS_TOKEN_SECRET, process.env.REFRESH_TOKEN_SECRET);
+console.log('--- JWT secrets passed to initializeJwtSecrets.'); // Add this log
+
 const server = http.createServer(app);
 
 //socket initialise

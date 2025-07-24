@@ -1,5 +1,5 @@
 import Event from '../models/event.model.js';
-import {uploadOnCloudinary} from '../utils/cloudinary.js';
+// import {uploadOnCloudinary} from '../utils/cloudinary.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
@@ -8,7 +8,6 @@ export const createEvent = asyncHandler(async (req, res) => {
   console.log("📥 Incoming request body:", req.body);
   console.log("🖼️ Incoming file object:", req.files?.image);
   const { title, description, date } = req.body;
-
   let imageUrl = '';
   if (req.files && req.files.image) {
     const imageFile = req.files.image;

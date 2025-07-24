@@ -1,18 +1,38 @@
+
 import User from '../models/user.model.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { getAccessSecret, getRefreshSecret } from '../config/jwt.config.js';
+
+// Then, use getAccessSecret() instead of ACCESS_SECRET
 
 
-const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET || 'accessSecretKey';
-const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refreshSecretKey';
+// console.log('--- Debugging auth.controller.js secret:', process.env.ACCESS_TOKEN_SECRET);
+
+
+// const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET; 
+// const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
+
+
 const generateAccessToken = (userId) => {
-  console.log('✅ Generating access token for user:', userId);
-  return jwt.sign({ id: userId }, ACCESS_SECRET, { expiresIn: '1d' });
+  console.log('✅ Generating access token for user:', userId);
+  const ACCESS_SECRET = getAccessSecret(); // <--- GET IT HERE!
+  if (!ACCESS_SECRET) {
+    console.error("FATAL: ACCESS_SECRET is null/undefined when generating token!");
+    throw new Error("JWT secret not available.");
+  }
+  console.log('--- Signing with ACCESS_SECRET (auth.controller):', ACCESS_SECRET);
+  return jwt.sign({ id: userId }, ACCESS_SECRET, { expiresIn: '1d' });
 };
-
 const generateRefreshToken = (userId) => {
-  console.log('✅ Generating refresh token for user:', userId);
-  return jwt.sign({ id: userId }, REFRESH_SECRET, { expiresIn: '10d' });
+  console.log('✅ Generating refresh token for user:', userId);
+  const REFRESH_SECRET = getRefreshSecret(); // <--- GET IT HERE!
+  if (!REFRESH_SECRET) {
+    console.error("FATAL: REFRESH_SECRET is null/undefined when generating token!");
+    throw new Error("JWT secret not available.");
+  }
+  console.log('--- Signing with REFRESH_SECRET (auth.controller):', REFRESH_SECRET);
+  return jwt.sign({ id: userId }, REFRESH_SECRET, { expiresIn: '10d' });
 };
 
 export const registerUser = async (req, res) => {
