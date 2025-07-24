@@ -1,6 +1,10 @@
 import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
 import Conversation from '../models/conversation.model.js'; 
+import asyncHandler from '../utils/asyncHandler.js';
+import { ApiResponse } from '../utils/apiResponse.js';
+import ApiError from '../utils/apiError.js';
+
 //creating post
 export const createProject = async (req, res) => {
   try {
@@ -53,7 +57,8 @@ export const createProject = async (req, res) => {
 export const getAllProjects = async (req, res) => {
   try {
     const projects = await Project.find()
-      .populate('createdBy', 'name email')
+      .populate('createdBy', 'firstName lastName university') 
+      .populate('joinRequests')
       .sort({ createdAt: -1 });
 
     res.status(200).json(projects);
@@ -62,43 +67,64 @@ export const getAllProjects = async (req, res) => {
   }
 };
 
-//get project by Id
-// export const getProjectById = async (req, res) => {
-//   try {
-//     const project = await Project.findById(req.params.id)
-//       .populate('createdBy', 'name email')
-//       .populate('joinRequests.user', 'name email');
-
-//     if (!project) return res.status(404).json({ message: 'Project not found' });
-
-//     res.status(200).json(project);
-//   } catch (err) {
-//     res.status(500).json({ message: 'Failed to fetch project', error: err.message });
-//   }
-// };
-
 export const getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('createdBy', 'firstName lastName email')
-      .populate('joinRequests.user', 'firstName lastName email ') 
+      .populate('createdBy', 'firstName lastName email university') // <-- Still missing 'university' and 'avatar' for creator
+     .populate({
+                path: 'joinRequests.user',
+                select: 'firstName lastName email university' // Include university and avatar
+            })
+            .populate({
+                path: 'invitedMembers.user', // Also populate invited members
+                select: 'firstName lastName email university'
+            })
+            .exec();
 
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    // Filter accepted members
-    const teamMembers = project.joinRequests
-      .filter(r => r.status === 'accepted')
-      .map(r => r.user);
+    const teamMembers = [];
 
-    res.status(200).json({
-      ...project.toObject(),
-      teamMembers // ⬅️ include in response
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch project', error: err.message });
-  }
-};
-
+        // Add accepted members from joinRequests
+        project.joinRequests.forEach(request => {
+            if (request.status === 'accepted' && request.user) {
+                teamMembers.push({
+                    _id: request.user._id,
+                    name: request.user.name || `${request.user.firstName} ${request.user.lastName}`,
+                    email: request.user.email,
+                    university: request.user.university,
+                    avatar: request.user.avatar,
+                    joinedVia: 'request'
+                });
+            }
+        });
+        // Add accepted members from invitedMembers
+        project.invitedMembers.forEach(invite => {
+            if (invite.status === 'accepted' && invite.user) {
+                const isDuplicate = teamMembers.some(member => member._id.toString() === invite.user._id.toString());
+                if (!isDuplicate) {
+                    teamMembers.push({
+                        _id: invite.user._id,
+                        name: invite.user.name || `${invite.user.firstName} ${invite.user.lastName}`,
+                        email: invite.user.email,
+                        university: invite.user.university,
+                        avatar: invite.user.avatar,
+                        joinedVia: 'invite'
+                    });
+                }
+            }
+        });
+        res.status(200).json(new ApiResponse(200, { // Use ApiResponse for consistency
+            ...project.toObject(),
+            teamMembers // include in response
+        }));
+    } catch (err) {
+        // Log the error for debugging
+        console.error('Error in getProjectById controller:', err);
+        throw new ApiError(500, 'Failed to fetch project details'); // Use ApiError for consistency
+    }
+}
+;
 
 //joining a project like i'm interested
 // In project.controller.js
@@ -201,7 +227,7 @@ export const getMyJoinRequests = async (req, res) => {
   console.log("🔍 Fetching join requests for:", req.user?.id);
 try {
 const projects = await Project.find({ 'joinRequests.user': req.user.id })
-.populate('createdBy', 'name email')
+.populate('createdBy', 'firstName lastName university')
 .sort({ createdAt: -1 });
 
 res.status(200).json(projects); 
@@ -210,3 +236,63 @@ res.status(200).json(projects);
 res.status(500).json({ message: 'Failed to fetch join requests', error: err.message });
 }
 };
+
+export const getTeamMembers = asyncHandler(async (req, res) => {
+    const { projectId } = req.params;
+
+    const project = await Project.findById(projectId)
+        .populate({
+            path: 'joinRequests.user', // Populate users who requested to join
+            select: 'firstName lastName email university avatar'
+        })
+        .populate({
+            path: 'invitedMembers.user', // Populate users who were invited
+            select: 'firstName lastName email university avatar'
+        })
+        .exec();
+
+    if (!project) {
+        throw new ApiError(404, 'Project not found');
+    }
+
+    const acceptedTeamMembers = [];
+
+    // Add accepted members from joinRequests
+    project.joinRequests.forEach(request => {
+        if (request.status === 'accepted' && request.user) {
+            acceptedTeamMembers.push({
+                _id: request.user._id,
+                firstName: request.user.firstName,
+                lastName: request.user.lastName,
+                name: request.user.name || `${request.user.firstName} ${request.user.lastName}`,
+                email: request.user.email,
+                university: request.user.university,
+                avatar: request.user.avatar,
+                joinedVia: 'request',
+                joinedAt: request.sentAt
+            });
+        }
+    });
+
+    // Add accepted members from invitedMembers
+    project.invitedMembers.forEach(invite => {
+        if (invite.status === 'accepted' && invite.user) {
+            const isDuplicate = acceptedTeamMembers.some(member => member._id.toString() === invite.user._id.toString());
+            if (!isDuplicate) {
+                acceptedTeamMembers.push({
+                    _id: invite.user._id,
+                    firstName: invite.user.firstName,
+                    lastName: invite.user.lastName,
+                    name: invite.user.name || `${invite.user.firstName} ${invite.user.lastName}`,
+                    email: invite.user.email,
+                    university: invite.user.university,
+                    avatar: invite.user.avatar,
+                    joinedVia: 'invite',
+                    joinedAt: invite.sentAt
+                });
+            }
+        }
+    });
+
+    res.status(200).json(new ApiResponse(200, { team: acceptedTeamMembers }));
+});

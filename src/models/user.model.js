@@ -47,6 +47,16 @@ const userSchema=new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+  },
+   {
+    // IMPORTANT: Enable virtuals to be included when converting to JSON/Object
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Add a virtual property for the full name
+userSchema.virtual('name').get(function() {
+    return `${this.firstName} ${this.lastName}`;
 });
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();

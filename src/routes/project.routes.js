@@ -6,7 +6,8 @@ import {
   joinProject,
   respondToRequest,
   getMyProjects,
-  getMyJoinRequests
+  getMyJoinRequests,
+  getTeamMembers
 } from '../controllers/project.controller.js';
 
 import { protect } from '../middleware/authMiddleware.js';
@@ -33,4 +34,7 @@ router.get('/me/created', protect, getMyProjects);
 // Get projects user is interested in
 router.get('/me/joined', protect, getMyJoinRequests);
 
+// Route to get team members for a specific project
+// Example: GET /api/projects/:projectId/team
+router.get('/:projectId/team', protect, getTeamMembers); 
 export default router;
