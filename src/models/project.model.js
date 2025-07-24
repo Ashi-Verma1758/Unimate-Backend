@@ -82,6 +82,7 @@ title: {
   joinRequests: [
 {
 user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+ userName: { type: String },
 status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
 sentAt: { type: Date, default: Date.now }
 }
@@ -90,6 +91,7 @@ sentAt: { type: Date, default: Date.now }
 invitedMembers: [
 {
 user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+ userName: { type: String },
 status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
 sentAt: { type: Date, default: Date.now }
 }
@@ -97,11 +99,12 @@ sentAt: { type: Date, default: Date.now }
 status: {
   type: String,
   enum: ['active', 'completed'],
-  default: 'active'
+  default: 'active',
+  index:true
 },
 
-
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+ 
   createdAt: { type: Date, default: Date.now }
 });
  export default mongoose.model('Project', projectSchema);
