@@ -49,34 +49,33 @@ const projectSchema = new mongoose.Schema(
         // --- END NEW FIELDS ---
     },
     { timestamps: true } // This adds `createdAt` and `updatedAt` fields automatically
-);
-
-// Virtual to get current number of accepted team members directly from the project document
+);// Virtual to get current number of accepted team members directly from the project document
 projectSchema.virtual('currentTeamCount').get(function() {
-    const acceptedRequests = this.joinRequests.filter(req => req.status === 'accepted').length;
-    const acceptedInvites = this.invitedMembers.filter(inv => inv.status === 'accepted').length;
-    // Need to account for the creator being part of the team too if not included in requests/invites
-    // Assuming creator is always 1 member, and others join.
-    // If the creator is *not* represented in joinRequests/invitedMembers, add 1.
-    // If they are, you'll need more complex logic. For now, assume 1 (creator) + accepted join/invites.
+    // --- FIX: Add || [] to ensure these are always arrays ---
     const uniqueAcceptedMembers = new Set();
-    this.joinRequests.forEach(req => {
+
+    // Iterate through joinRequests, ensuring it's an array
+    (this.joinRequests || []).forEach(req => {
         if (req.status === 'accepted' && req.user) uniqueAcceptedMembers.add(req.user.toString());
     });
-    this.invitedMembers.forEach(inv => {
+
+    // Iterate through invitedMembers, ensuring it's an array
+    (this.invitedMembers || []).forEach(inv => {
         if (inv.status === 'accepted' && inv.user) uniqueAcceptedMembers.add(inv.user.toString());
     });
-    // Add creator to unique count if not already added. Requires createdBy to be populated.
+
+    // Add creator to unique count if not already added.
+    // This requires createdBy to be populated, or its ID accessible.
     if (this.createdBy) {
+        // If createdBy is an ObjectId string (not populated object), it will work directly with toString()
         uniqueAcceptedMembers.add(this.createdBy.toString());
     }
 
     return uniqueAcceptedMembers.size; // Return the count of unique accepted members
 });
 
-// Ensure virtuals are included when converting to JSON
+// Ensure virtuals are included when converting to JSON and Objects
 projectSchema.set('toJSON', { virtuals: true });
 projectSchema.set('toObject', { virtuals: true });
-
 const Project = mongoose.model('Project', projectSchema);
 export default Project;

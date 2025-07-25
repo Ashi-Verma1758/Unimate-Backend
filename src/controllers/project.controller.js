@@ -57,7 +57,7 @@ export const createProject = async (req, res) => {
 export const getAllProjects = async (req, res) => {
   try {
     const projects = await Project.find()
-      .populate('createdBy', 'firstName lastName university academicYear rating projectsCompleted avatar') // <--- ADDED FIELDS
+      .populate('createdBy', 'firstName lastName university academicYear') // <--- ADDED FIELDS
       .populate('joinRequests') // Still populating full requests to get their length for responseCount
       // If you add currentTeamCount as a stored field or derived with virtual
       // You may need to .populate('teamMembers') if it's an array of User IDs directly on Project
@@ -75,14 +75,14 @@ export const getAllProjects = async (req, res) => {
 export const getProjectById = async (req, res) => {
     try {
         const project = await Project.findById(req.params.id)
-            .populate('createdBy', 'firstName lastName email university academicYear rating projectsCompleted avatar')
+            .populate('createdBy', 'firstName lastName email university academicYear')
             .populate({
                 path: 'joinRequests.user',
-                select: 'firstName lastName email university academicYear rating projectsCompleted avatar'
+                select: 'firstName lastName email university academicYear '
             })
             .populate({
                 path: 'invitedMembers.user',
-                select: 'firstName lastName email university academicYear rating projectsCompleted avatar'
+                select: 'firstName lastName email university academicYear '
             })
             .exec();
 
