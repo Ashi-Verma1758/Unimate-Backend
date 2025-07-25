@@ -4,7 +4,7 @@ import Conversation from '../models/conversation.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
-
+import mongoose from 'mongoose';
 //creating post
 export const createProject = async (req, res) => {
   try {
@@ -55,50 +55,72 @@ export const createProject = async (req, res) => {
 
 //getting all projects
 export const getAllProjects = async (req, res) => {
-  try {
-    const projects = await Project.find()
-      .populate('createdBy', 'firstName lastName university') 
-      .populate('joinRequests')
-      .sort({ createdAt: -1 });
+  try {
+    const projects = await Project.find()
+      .populate('createdBy', 'firstName lastName university academicYear rating projectsCompleted avatar') // <--- ADDED FIELDS
+      .populate('joinRequests') // Still populating full requests to get their length for responseCount
+      // If you add currentTeamCount as a stored field or derived with virtual
+      // You may need to .populate('teamMembers') if it's an array of User IDs directly on Project
+      .sort({ createdAt: -1 });
 
-    res.status(200).json(projects);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch projects', error: err.message });
-  }
+    res.status(200).json(projects);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch projects', error: err.message });
+  }
 };
 
+
+// In your project.controller.js
+
 export const getProjectById = async (req, res) => {
-  try {
-    const project = await Project.findById(req.params.id)
-      .populate('createdBy', 'firstName lastName email university') // <-- Still missing 'university' and 'avatar' for creator
-     .populate({
+    try {
+        const project = await Project.findById(req.params.id)
+            .populate('createdBy', 'firstName lastName email university academicYear rating projectsCompleted avatar')
+            .populate({
                 path: 'joinRequests.user',
-                select: 'firstName lastName email university' // Include university and avatar
+                select: 'firstName lastName email university academicYear rating projectsCompleted avatar'
             })
             .populate({
-                path: 'invitedMembers.user', // Also populate invited members
-                select: 'firstName lastName email university'
+                path: 'invitedMembers.user',
+                select: 'firstName lastName email university academicYear rating projectsCompleted avatar'
             })
             .exec();
 
-    if (!project) return res.status(404).json({ message: 'Project not found' });
+        if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    const teamMembers = [];
+        // --- ADD THIS LOGIC TO INCREMENT VIEWS ---
+        project.views = (project.views || 0) + 1; // Increment view count
+        await project.save(); // Save the updated project with the new view count
+        // --- END ADDITION ---
 
-        // Add accepted members from joinRequests
+        const teamMembers = [];
+        if (project.createdBy) {
+            teamMembers.push({
+                _id: project.createdBy._id,
+                name: project.createdBy.name || `${project.createdBy.firstName} ${project.createdBy.lastName}`,
+                email: project.createdBy.email,
+                university: project.createdBy.university,
+                avatar: project.createdBy.avatar,
+                role: 'Project Lead',
+            });
+        }
+
         project.joinRequests.forEach(request => {
             if (request.status === 'accepted' && request.user) {
-                teamMembers.push({
-                    _id: request.user._id,
-                    name: request.user.name || `${request.user.firstName} ${request.user.lastName}`,
-                    email: request.user.email,
-                    university: request.user.university,
-                    avatar: request.user.avatar,
-                    joinedVia: 'request'
-                });
+                const isDuplicate = teamMembers.some(member => member._id.toString() === request.user._id.toString());
+                if (!isDuplicate) {
+                    teamMembers.push({
+                        _id: request.user._id,
+                        name: request.user.name || `${request.user.firstName} ${request.user.lastName}`,
+                        email: request.user.email,
+                        university: request.user.university,
+                        avatar: request.user.avatar,
+                        joinedVia: 'request',
+                        role: 'Member'
+                    });
+                }
             }
         });
-        // Add accepted members from invitedMembers
         project.invitedMembers.forEach(invite => {
             if (invite.status === 'accepted' && invite.user) {
                 const isDuplicate = teamMembers.some(member => member._id.toString() === invite.user._id.toString());
@@ -109,63 +131,73 @@ export const getProjectById = async (req, res) => {
                         email: invite.user.email,
                         university: invite.user.university,
                         avatar: invite.user.avatar,
-                        joinedVia: 'invite'
+                        joinedVia: 'invite',
+                        role: 'Member'
                     });
                 }
             }
         });
-        res.status(200).json(new ApiResponse(200, { // Use ApiResponse for consistency
+
+        res.status(200).json(new ApiResponse(200, {
             ...project.toObject(),
-            teamMembers // include in response
+            currentTeamCount: project.currentTeamCount, // This virtual will be included
+            teamMembers
         }));
     } catch (err) {
-        // Log the error for debugging
         console.error('Error in getProjectById controller:', err);
-        throw new ApiError(500, 'Failed to fetch project details'); // Use ApiError for consistency
+        throw new ApiError(500, 'Failed to fetch project details');
     }
-}
-;
+};
+
+// Note: getAllProjects will automatically include the 'views' field
+// as long as it's defined in the schema and not explicitly excluded by .select()
+
 
 //joining a project like i'm interested
 // In project.controller.js
+//joining a project like i'm interested
+// In project.controller.js
 export const joinProject = async (req, res) => {
-  try {
-    const { message } = req.body;
-    const project = await Project.findById(req.params.id);
+    try {
+        const { message } = req.body;
+         const projectId = req.params.id;
+          if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            return res.status(400).json({ message: 'Invalid project ID format.' });
+        }
+        const project = await Project.findById(req.params.id);
 
-    if (!project) return res.status(404).json({ message: 'Project not found' });
+        if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    // IMPORTANT: Ensure req.user._id is available here.
-    // If req.user is correctly set by 'protect', then req.user._id will exist.
-    if (!req.user || !req.user._id) {
-        return res.status(401).json({ message: 'Authentication required: User ID not found on request.' });
+        // IMPORTANT: Ensure req.user._id is available here.
+        // If req.user is correctly set by 'protect', then req.user._id will exist.
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: 'Authentication required: User ID not found on request.' });
+        }
+
+        // Prevent duplicate requests
+        const alreadyRequested = project.joinRequests.find(
+            (reqObj) => reqObj.user.toString() === req.user._id.toString() // Use _id consistently
+        );
+        if (alreadyRequested) {
+            return res.status(400).json({ message: 'You have already requested to join this project' });
+        }
+
+        // Add join request
+        project.joinRequests.push({
+            user: req.user._id, // Use _id consistently
+            message,
+            status: 'pending'
+        });
+
+        await project.save();
+        res.status(200).json({ message: 'Join request sent successfully' });
+    } catch (err) {
+        // Log the actual error on the server side for debugging
+        console.error('Error in joinProject controller:', err);
+        // Send a generic 500 error to the client, but log details on server
+        res.status(500).json({ message: 'Failed to send request due to an internal server error.', error: err.message });
     }
-
-    // Prevent duplicate requests
-    const alreadyRequested = project.joinRequests.find(
-      (reqObj) => reqObj.user.toString() === req.user._id.toString() // Use _id consistently
-    );
-    if (alreadyRequested) {
-      return res.status(400).json({ message: 'You have already requested to join this project' });
-    }
-
-    // Add join request
-    project.joinRequests.push({
-      user: req.user._id, // Use _id consistently
-      message,
-      status: 'pending'
-    });
-
-    await project.save();
-    res.status(200).json({ message: 'Join request sent successfully' });
-  } catch (err) {
-    // Log the actual error on the server side for debugging
-    console.error('Error in joinProject controller:', err);
-    // Send a generic 500 error to the client, but log details on server
-    res.status(500).json({ message: 'Failed to send request due to an internal server error.', error: err.message });
-  }
 };
-
 //accepting or rejecting req
 export const respondToRequest = asyncHandler(async (req, res) => { // Wrapped in asyncHandler
     try {

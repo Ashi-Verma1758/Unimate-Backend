@@ -1,113 +1,82 @@
+// models/project.model.js (Example additions)
 import mongoose from 'mongoose';
-const projectSchema=new mongoose.Schema({
 
-title: { 
-  type: String,
-   required: true 
-  },
-  description: { type: String, required: true },
-  domain: {
-     type: String,
-     enum:[
-      'Artificial Intelligence',
-      'Web Development',
-      'Mobile Development',
-      'Data Science',
-      'Cyber Security',
-      'Blockchain',
-      'IoT',
-      'Health Technology',
-      'Environmental Technology',
-      'Financial Technology',
-      'Educational Technology',
-      'Gaming',
-      'Social Impact',
-      'Other'
-     ],
-      required: true },
-      projectType: {
-      type: String,
-      enum: ['Academic Project', 'Hackathon', 'Startup', 'Startup Idea', 'Research Project', 'Open Source', 'Competition', 'Other'],
-      required: true 
-      },
+const projectSchema = new mongoose.Schema(
+    {
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        domain: { type: String, required: true },
+        projectType: { type: String },
+        requiredSkills: [{ type: String }], // Array of strings
+        niceToHaveSkills: [{ type: String }],
+        timeCommitment: { type: String, required: true },
+        projectDuration: { type: String, required: true },
+        teamSize: { type: Number, required: true }, // Assuming this is the 'target' size
+        location: { type: String },
+        startDate: { type: Date, required: true },
+        applicationDeadline: { type: Date, required: true },
+        remote: { type: Boolean, default: false }, // Renamed from 'remoteWorkOkay' in frontend to 'remote' here
+        githubRepo: { type: String },
+        figmaLink: { type: String },
+        demoLink: { type: String },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        joinRequests: [ // Subdocument array for join requests
+            {
+                user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+                message: { type: String },
+                status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+                sentAt: { type: Date, default: Date.now }
+            }
+        ],
+        invitedMembers: [ // Subdocument array for invitations
+            {
+                user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+                status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+                sentAt: { type: Date, default: Date.now }
+            }
+        ],
+        // --- NEW FIELDS FOR STATS ---
+        views: {
+            type: Number,
+            default: 0 // Initialize views to 0
+        },
+        // We'll calculate currentTeamCount dynamically based on joinRequests/invitedMembers statuses
+        // or add a virtual if preferred, but not as a stored field to avoid sync issues.
+        // --- END NEW FIELDS ---
+    },
+    { timestamps: true } // This adds `createdAt` and `updatedAt` fields automatically
+);
 
-  requiredSkills: [{ type: String }],
-  niceToHaveSkills: [{ type: String }],
+// Virtual to get current number of accepted team members directly from the project document
+projectSchema.virtual('currentTeamCount').get(function() {
+    const acceptedRequests = this.joinRequests.filter(req => req.status === 'accepted').length;
+    const acceptedInvites = this.invitedMembers.filter(inv => inv.status === 'accepted').length;
+    // Need to account for the creator being part of the team too if not included in requests/invites
+    // Assuming creator is always 1 member, and others join.
+    // If the creator is *not* represented in joinRequests/invitedMembers, add 1.
+    // If they are, you'll need more complex logic. For now, assume 1 (creator) + accepted join/invites.
+    const uniqueAcceptedMembers = new Set();
+    this.joinRequests.forEach(req => {
+        if (req.status === 'accepted' && req.user) uniqueAcceptedMembers.add(req.user.toString());
+    });
+    this.invitedMembers.forEach(inv => {
+        if (inv.status === 'accepted' && inv.user) uniqueAcceptedMembers.add(inv.user.toString());
+    });
+    // Add creator to unique count if not already added. Requires createdBy to be populated.
+    if (this.createdBy) {
+        uniqueAcceptedMembers.add(this.createdBy.toString());
+    }
 
-  timeCommitment: { 
-    type: String,
-    enum: [
-      '1-5 hours/week',
-      '5-10 hours/week',
-      '10-15 hours/week',
-      '15-20 hours/week',
-      '20+ hours/week',
-      'Flexible'
-    ],
-    required: true
-  
-  },
-  projectDuration: {
-     type: String,
-     enum:[
-      '1-2 weeks',
-      '3-4 weeks',
-      '1-2 months',
-      '3-4 months',
-      '5-6 months',
-      '6+ months',
-      'Ongoing'
-     ],
-     required:true
-     }, 
-  teamSize: {
-     type: String,
-     enum:[
-      '1-2 people',
-      '2-3 people',
-      '3-4 people',
-      '4+ people'
-     ],
-     required:true
-     },
-  location: { type: String },
-  startDate: { type: Date },
-  applicationDeadline: { type: Date },
-  remote: { type: Boolean, default: false },
-
-  githubRepo: { type: String },
-  figmaLink: { type: String },
-  demoLink: { type: String },
-
-  joinRequests: [
-{
-user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
- userName: { type: String },
-status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
-sentAt: { type: Date, default: Date.now }
-}
-],
-
-invitedMembers: [
-{
-user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
- userName: { type: String },
-status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
-sentAt: { type: Date, default: Date.now }
-}
-],
-status: {
-  type: String,
-  enum: ['active', 'completed'],
-  default: 'active',
-  index:true
-},
-
-createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
- 
-  createdAt: { type: Date, default: Date.now }
+    return uniqueAcceptedMembers.size; // Return the count of unique accepted members
 });
- export default mongoose.model('Project', projectSchema);
 
+// Ensure virtuals are included when converting to JSON
+projectSchema.set('toJSON', { virtuals: true });
+projectSchema.set('toObject', { virtuals: true });
 
-
+const Project = mongoose.model('Project', projectSchema);
+export default Project;
