@@ -6,7 +6,7 @@ import {
   joinProject,
   respondToRequest,
   getMyProjects,
-  getMyJoinRequests,
+  getSentRequests,
   getTeamMembers
 } from '../controllers/project.controller.js';
 
@@ -26,13 +26,13 @@ router.get('/:id', getProjectById);
 router.post('/:id/join', protect, joinProject);
 
 //accpeting or rejecting join req
-router.put('/:projectId/respond/:userId', protect, respondToRequest);
+router.patch('/:projectId/requests/:requestId/respond/:userId', protect, respondToRequest);
 
 // Get projects created by current user
 router.get('/me/created', protect, getMyProjects);
 
 // Get projects user is interested in
-router.get('/me/joined', protect, getMyJoinRequests);
+router.get('/me/incoming-request', protect, getSentRequests);
 
 // Route to get team members for a specific project
 // Example: GET /api/projects/:projectId/team
