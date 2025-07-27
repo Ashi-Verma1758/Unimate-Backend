@@ -13,7 +13,7 @@ const router = express.Router();
 router.post('/send/:projectId/:userId', protect, sendProjectInvitation); // Send an invite
 router.put('/respond/:projectId/:userId', protect,respondToProjectInvitation); // Accept or Reject
 router.get('/received', protect, getReceivedInvites); // Received invites for user
-router.get('/sent/:projectId', protect, getSentRequests); // Sent invites by creator
+router.get('/sent', protect, getSentRequests); // Sent invites by creator
 
 
 export default router;
