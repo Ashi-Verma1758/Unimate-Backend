@@ -19,6 +19,9 @@ router.post('/', protect, createProject);
 //getting all projects
 router.get('/', getAllProjects);
 
+// Get projects created by current user
+router.get('/me/created', protect, getMyProjects);
+
 //getting projects by Id
 router.get('/:id', getProjectById);
 
@@ -28,8 +31,7 @@ router.post('/:id/join', protect, joinProject);
 //accpeting or rejecting join req
 router.patch('/:projectId/requests/:requestId/respond/:userId', protect, respondToRequest);
 
-// Get projects created by current user
-router.get('/me/created', protect, getMyProjects);
+
 
 // Get projects user is interested in
 router.get('/me/incoming-request', protect, getSentRequests);
