@@ -13,7 +13,9 @@ const userSchema=new mongoose.Schema({
   },
 
   university: { type: String, required: true },
-
+bio:{type:String,
+  default:''
+},
   academicYear:{
     type:String,
     enum: ['1st', '2nd', '3rd', '4th', 'Other'],
