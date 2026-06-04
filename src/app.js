@@ -34,7 +34,7 @@ import eventRoutes from './routes/event.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import inviteRoutes from './routes/invite.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
-
+import searchRoutes from "./routes/Search.routes.js";
 
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/auth', authRoutes);
@@ -43,4 +43,5 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/invites', inviteRoutes);
+app.use("/api/search", searchRoutes);
 export { app };
