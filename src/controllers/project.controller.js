@@ -328,6 +328,7 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
     const { projectId } = req.params;
 
     const project = await Project.findById(projectId)
+        .populate('createdBy', 'firstName lastName email university avatar')
         .populate({
             path: 'joinRequests.user', // Populate users who requested to join
             select: 'firstName lastName email university avatar'
@@ -344,20 +345,38 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
 
     const acceptedTeamMembers = [];
 
+    if (project.createdBy) {
+        acceptedTeamMembers.push({
+            _id: project.createdBy._id,
+            firstName: project.createdBy.firstName,
+            lastName: project.createdBy.lastName,
+            name: project.createdBy.name || `${project.createdBy.firstName} ${project.createdBy.lastName}`,
+            email: project.createdBy.email,
+            university: project.createdBy.university,
+            avatar: project.createdBy.avatar,
+            role: 'Project Lead'
+        });
+    }
+
     // Add accepted members from joinRequests
     project.joinRequests.forEach(request => {
         if (request.status === 'accepted' && request.user) {
-            acceptedTeamMembers.push({
-                _id: request.user._id,
-                firstName: request.user.firstName,
-                lastName: request.user.lastName,
-                name: request.user.name || `${request.user.firstName} ${request.user.lastName}`,
-                email: request.user.email,
-                university: request.user.university,
-                avatar: request.user.avatar,
-                joinedVia: 'request',
-                joinedAt: request.sentAt
-            });
+            const isDuplicate = acceptedTeamMembers.some(member => member._id.toString() === request.user._id.toString());
+
+            if (!isDuplicate) {
+                acceptedTeamMembers.push({
+                    _id: request.user._id,
+                    firstName: request.user.firstName,
+                    lastName: request.user.lastName,
+                    name: request.user.name || `${request.user.firstName} ${request.user.lastName}`,
+                    email: request.user.email,
+                    university: request.user.university,
+                    avatar: request.user.avatar,
+                    joinedVia: 'request',
+                    joinedAt: request.sentAt,
+                    role: 'Member'
+                });
+            }
         }
     });
 
@@ -375,7 +394,8 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
                     university: invite.user.university,
                     avatar: invite.user.avatar,
                     joinedVia: 'invite',
-                    joinedAt: invite.sentAt
+                    joinedAt: invite.sentAt,
+                    role: 'Member'
                 });
             }
         }

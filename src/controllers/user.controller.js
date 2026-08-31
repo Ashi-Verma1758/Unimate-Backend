@@ -69,9 +69,7 @@ export const updateUserProfile = async (req, res) => {
 export const getAllUsers = async (req, res) => {
     try {
         // 1. Fetch all users but exclude sensitive information
-        const users = await User.find({ 
-            _id: { $ne: req.user._id } // Exclude the currently logged-in user
-        }).select('-password -refreshToken').lean();
+        const users = await User.find({}).select('-password -refreshToken').lean();
 
         // 2. Get project counts for all users in a single, efficient query
         const projectCounts = await Project.aggregate([
@@ -91,6 +89,7 @@ export const getAllUsers = async (req, res) => {
         // 4. Add the project count to each user object
         const usersWithData = users.map(user => ({
             ...user,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
             projectCount: projectCountMap.get(user._id.toString()) || 0
         }));
 

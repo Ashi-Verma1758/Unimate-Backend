@@ -16,7 +16,12 @@ router.post('/conversation', protect, createConversation);
 
 // Usage: /api/chats/get-or-create?otherUserId=xxx&projectId=yyy
 router.get('/get-or-create', protect, getOrCreateConversation);
+router.get('/get-or-create-conversation', protect, getOrCreateConversation);
 
+// Backward-compatible aliases for the frontend contract
+router.get('/conversations', protect, getUserConversations);
+router.get('/messages/:conversationId', protect, getMessages);
+router.post('/messages/:conversationId', protect, sendMessage);
 
 // GET /api/chats/:conversationId/messages → get all messages in a conversation
 router.get('/:conversationId/messages', protect, getMessages);
@@ -24,7 +29,7 @@ router.get('/:conversationId/messages', protect, getMessages);
 // POST /api/chats/:conversationId/messages → send a new message
 router.post('/:conversationId/messages', protect, sendMessage);
 
-//get all cono of logged in user
+// get all conversations of the logged-in user
 router.get('/my', protect, getUserConversations);
 
 export default router;

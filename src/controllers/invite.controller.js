@@ -1,5 +1,6 @@
 import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
+import Conversation from '../models/conversation.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
@@ -92,6 +93,20 @@ export const respondToProjectInvitation = asyncHandler(async (req, res) => {
     invitation.status = status;
     await project.save();
 
+    if (status === 'accepted') {
+        const existingConversation = await Conversation.findOne({
+            members: { $all: [project.createdBy, userId] },
+            project: projectId
+        });
+
+        if (!existingConversation) {
+            await Conversation.create({
+                members: [project.createdBy, userId],
+                project: projectId
+            });
+        }
+    }
+
     res.status(200).json(new ApiResponse(200, null, `Invitation ${status}`));
 });
 // Function: getReceivedProjectInvitations (Get all invitations received by the logged-in user from project creators)
@@ -121,10 +136,17 @@ export const getReceivedInvites = asyncHandler(async (req, res) => { // Renaming
             return {
                 projectId: project._id,
                 projectName: project.title,
+                projectDescription: project.description,
+                domain: project.domain,
+                timeCommitment: project.timeCommitment,
+                projectDuration: project.projectDuration,
+                requiredSkills: project.requiredSkills || [],
+                fromUserId: project.createdBy._id,
                 fromName: project.createdBy.name || `${project.createdBy.firstName} ${project.createdBy.lastName}`, // Use virtual 'name' or concatenate
                 fromUniversity: project.createdBy.university,
                 fromAvatar: project.createdBy.avatar || '', // Ensure it's a string, even if empty
                 timeAgo: calculateTimeAgo(invitation.sentAt), // Ensure calculateTimeAgo is available
+                project: project.toObject(),
                 // Add any other details needed by the frontend, e.g., the invitation ID itself if required for actions
                 invitationId: invitation._id // Useful for frontend
             };
@@ -134,20 +156,35 @@ export const getReceivedInvites = asyncHandler(async (req, res) => { // Renaming
     res.status(200).json(new ApiResponse(200, receivedInvitations));
 });
 
-// Function: getSentRequests (Get all requests from other users to join projects created by the logged-in user)
+// Function: getSentRequests (Get all project invitations sent by the logged-in user)
 export const getSentRequests = asyncHandler(async (req, res) => {
     const userId = req.user._id;
-    const projects = await Project.find({ createdBy: userId })
-        .populate('joinRequests.user', 'firstName lastName email university avatar') // Include university and avatar if you display them
+    const projects = await Project.find({ createdBy: userId, 'invitedMembers.0': { $exists: true } })
+        .populate('invitedMembers.user', 'firstName lastName email university avatar')
         .exec();
 
-    // You might want to filter joinRequests by status here too (e.g., only pending requests)
-    const sentRequests = projects.map((project) => ({
-        projectId: project._id, // Add projectId for clarity on frontend
-        projectName: project.title, // Add projectName for clarity on frontend
-        joinRequests: project.joinRequests.filter(request => request.status === 'pending') // Example: only show pending requests
-        // Or remove filter if you want all requests regardless of status
-    }));
+    const sentRequests = projects.flatMap((project) =>
+        project.invitedMembers.map((invitation) => {
+            const invitedUser = invitation.user || {};
+            return {
+                invitationId: invitation._id,
+                projectId: project._id,
+                projectName: project.title,
+                projectDescription: project.description,
+                domain: project.domain,
+                timeCommitment: project.timeCommitment,
+                projectDuration: project.projectDuration,
+                requiredSkills: project.requiredSkills || [],
+                toUserId: invitedUser._id,
+                toName: `${invitedUser.firstName || ''} ${invitedUser.lastName || ''}`.trim() || 'Unknown User',
+                toUniversity: invitedUser.university || 'University not listed',
+                toAvatar: invitedUser.avatar || '',
+                status: invitation.status,
+                timeAgo: calculateTimeAgo(invitation.sentAt),
+                project: project.toObject(),
+            };
+        })
+    );
 
     res.status(200).json(new ApiResponse(200, sentRequests));
 });
