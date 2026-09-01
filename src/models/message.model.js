@@ -12,8 +12,17 @@ const messageSchema = new mongoose.Schema({
   },
   text: {
     type: String,
-    required: true
+    default: ''
   },
+  attachments: [
+    {
+      originalName: { type: String, required: true },
+      fileName: { type: String, required: true },
+      url: { type: String, required: true },
+      mimeType: { type: String, required: true },
+      size: { type: Number, required: true },
+    }
+  ],
   sentAt: {
     type: Date,
     default: Date.now

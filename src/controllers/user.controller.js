@@ -22,6 +22,23 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
+export const getUserProfileById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).select('-password -refreshToken');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userObject = user.toObject({ virtuals: true });
+    const projects = await Project.find({ createdBy: userObject._id });
+    userObject.projects = projects;
+
+    res.status(200).json(userObject);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 //update profile
 export const updateUserProfile = async (req, res) => {
   try {

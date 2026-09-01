@@ -1,9 +1,46 @@
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
 import Conversation from '../models/conversation.model.js';
 import Message from '../models/message.model.js';
 import Project from '../models/project.model.js';
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+const chatUploadDir = path.join(process.cwd(), 'public', 'uploads', 'chat');
+
+const normalizeUploadedFiles = (files) => {
+  if (!files?.attachments) return [];
+  return Array.isArray(files.attachments) ? files.attachments : [files.attachments];
+};
+
+const saveChatAttachments = async (files) => {
+  const uploadedFiles = normalizeUploadedFiles(files).slice(0, 5);
+  fs.mkdirSync(chatUploadDir, { recursive: true });
+
+  return Promise.all(
+    uploadedFiles.map(async (file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        const error = new Error(`${file.name} exceeds the 10 MB file limit.`);
+        error.status = 400;
+        throw error;
+      }
+
+      const safeOriginalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeOriginalName}`;
+      const uploadPath = path.join(chatUploadDir, fileName);
+
+      await file.mv(uploadPath);
+
+      return {
+        originalName: file.name,
+        fileName,
+        url: `/uploads/chat/${fileName}`,
+        mimeType: file.mimetype,
+        size: file.size,
+      };
+    })
+  );
+};
 
 const getProjectTeamIds = (project) => {
   const memberIds = new Set();
@@ -28,12 +65,20 @@ const getProjectTeamIds = (project) => {
 };
 
 const getAuthorizedProjectTeam = async (projectId, userId, otherUserId) => {
-  if (!projectId || !isValidObjectId(projectId)) {
-    return { status: 400, message: 'A valid project is required to start chat.' };
+  if (!otherUserId || !isValidObjectId(otherUserId)) {
+    return { status: 400, message: 'A valid user is required to start chat.' };
   }
 
-  if (!otherUserId || !isValidObjectId(otherUserId)) {
-    return { status: 400, message: 'A valid team member is required to start chat.' };
+  if (userId.toString() === otherUserId.toString()) {
+    return { status: 400, message: 'Choose another user to chat with.' };
+  }
+
+  if (!projectId) {
+    return { project: null };
+  }
+
+  if (!isValidObjectId(projectId)) {
+    return { status: 400, message: 'A valid project is required to start chat.' };
   }
 
   const project = await Project.findById(projectId).select('createdBy joinRequests invitedMembers');
@@ -50,10 +95,6 @@ const getAuthorizedProjectTeam = async (projectId, userId, otherUserId) => {
       status: 403,
       message: 'Chat is available only after both users are accepted team members for this project.',
     };
-  }
-
-  if (currentUserId === targetUserId) {
-    return { status: 400, message: 'Choose another team member to chat with.' };
   }
 
   return { project };
@@ -91,13 +132,13 @@ const assertConversationAccess = async (conversationId, userId) => {
     return { status: 404, message: 'Conversation not found.' };
   }
 
-  if (!conversation.project) {
-    return { status: 403, message: 'This conversation is missing a project context.' };
-  }
-
   const isMember = conversation.members.some((memberId) => memberId.toString() === userId.toString());
   if (!isMember) {
     return { status: 403, message: 'You do not have access to this conversation.' };
+  }
+
+  if (!conversation.project) {
+    return { conversation };
   }
 
   const project = await Project.findById(conversation.project).select('createdBy joinRequests invitedMembers');
@@ -141,24 +182,30 @@ export const sendMessage = async (req, res) => {
   try {
     const { text } = req.body;
     const { conversationId } = req.params;
+    const trimmedText = text?.trim() || '';
     const access = await assertConversationAccess(conversationId, req.user._id);
 
     if (access.status) {
       return res.status(access.status).json({ message: access.message });
     }
 
-    if (!text?.trim()) {
-      return res.status(400).json({ message: 'Message text is required.' });
+    const attachments = await saveChatAttachments(req.files);
+
+    if (!trimmedText && attachments.length === 0) {
+      return res.status(400).json({ message: 'Message text or attachment is required.' });
     }
 
     const message = await Message.create({
       conversationId,
       sender: req.user._id,
-      text: text.trim(),
+      text: trimmedText,
+      attachments,
     });
 
+    const lastMessage = trimmedText || (attachments.length === 1 ? 'Sent an attachment' : `Sent ${attachments.length} attachments`);
+
     await Conversation.findByIdAndUpdate(conversationId, {
-      lastMessage: text.trim(),
+      lastMessage,
       updatedAt: new Date(),
     });
 
@@ -172,7 +219,7 @@ export const sendMessage = async (req, res) => {
 
     res.status(201).json(populatedMessage);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to send message', error: error.message });
+    res.status(error.status || 500).json({ message: 'Failed to send message', error: error.message });
   }
 };
 
@@ -217,7 +264,6 @@ export const getUserConversations = async (req, res) => {
     const userId = req.user._id;
     const conversations = await Conversation.find({
       members: userId,
-      project: { $exists: true, $ne: null },
     })
       .populate('members', 'firstName lastName email university avatar')
       .populate('project', 'title')
