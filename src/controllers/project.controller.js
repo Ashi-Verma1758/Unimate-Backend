@@ -2,8 +2,8 @@ import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
 import Conversation from '../models/conversation.model.js'; 
 import asyncHandler from '../utils/asyncHandler.js';
-import { ApiResponse } from '../utils/apiResponse.js';
-import ApiError from '../utils/apiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import ApiError from '../utils/ApiError.js';
 import mongoose from 'mongoose';
 //creating post
 export const createProject = async (req, res) => {
@@ -56,7 +56,7 @@ export const createProject = async (req, res) => {
 //getting all projects
 export const getAllProjects = async (req, res) => {
   try {
-    const projects = await Project.find()
+    const projects = await Project.find({ createdBy: { $ne: req.user._id } })
       .populate('createdBy', 'firstName lastName university academicYear') // <--- ADDED FIELDS
       .populate('joinRequests') // Still populating full requests to get their length for responseCount
       // If you add currentTeamCount as a stored field or derived with virtual
@@ -78,11 +78,11 @@ export const getProjectById = async (req, res) => {
             .populate('createdBy', 'firstName lastName email university academicYear')
             .populate({
                 path: 'joinRequests.user',
-                select: 'firstName lastName email university academicYear '
+                    select: 'firstName lastName university academicYear avatar'
             })
             .populate({
                 path: 'invitedMembers.user',
-                select: 'firstName lastName email university academicYear '
+                    select: 'firstName lastName university academicYear avatar'
             })
             .exec();
 
@@ -172,6 +172,18 @@ export const joinProject = async (req, res) => {
         // If req.user is correctly set by 'protect', then req.user._id will exist.
         if (!req.user || !req.user._id) {
             return res.status(401).json({ message: 'Authentication required: User ID not found on request.' });
+        }
+
+        if (project.createdBy.toString() === req.user._id.toString()) {
+            return res.status(400).json({ message: 'You cannot join your own project' });
+        }
+
+        if (project.applicationDeadline && new Date(project.applicationDeadline) < new Date()) {
+            return res.status(400).json({ message: 'The application deadline for this project has passed' });
+        }
+
+        if (project.teamSize && project.currentTeamCount >= project.teamSize) {
+            return res.status(400).json({ message: 'This project has reached its team capacity' });
         }
 
         // Prevent duplicate requests
@@ -341,6 +353,18 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
 
     if (!project) {
         throw new ApiError(404, 'Project not found');
+    }
+
+    const requesterId = req.user._id.toString();
+    const isProjectOwner = project.createdBy?._id?.toString() === requesterId;
+    const isAcceptedMember = project.joinRequests.some(
+        (request) => request.status === 'accepted' && request.user?._id?.toString() === requesterId
+    ) || project.invitedMembers.some(
+        (invite) => invite.status === 'accepted' && invite.user?._id?.toString() === requesterId
+    );
+
+    if (!isProjectOwner && !isAcceptedMember) {
+        throw new ApiError(403, 'You are not a member of this project');
     }
 
     const acceptedTeamMembers = [];

@@ -17,13 +17,13 @@ const router = express.Router();
 router.post('/', protect, createProject);
 
 //getting all projects
-router.get('/', getAllProjects);
+router.get('/', protect, getAllProjects);
 
 // Get projects created by current user
 router.get('/me/created', protect, getMyProjects);
 
 //getting projects by Id
-router.get('/:id', getProjectById);
+router.get('/:id', protect, getProjectById);
 
 //send join request
 router.post('/:id/join', protect, joinProject);

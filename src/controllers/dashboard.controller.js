@@ -17,13 +17,19 @@ export const getDashboardSummary = async (req, res) => {
     });
 
     // Team members in all user's projects
-    const userProjects = await Project.find({ createdBy: userId }).select('joinRequests');
+    const userProjects = await Project.find({ createdBy: userId }).select('joinRequests invitedMembers');
     const teamMembersSet = new Set();
 
     userProjects.forEach(project => {
       project.joinRequests.forEach(req => {
         if (req.status === 'accepted') {
           teamMembersSet.add(req.user.toString());
+        }
+      });
+
+      project.invitedMembers.forEach(invite => {
+        if (invite.status === 'accepted') {
+          teamMembersSet.add(invite.user.toString());
         }
       });
     });

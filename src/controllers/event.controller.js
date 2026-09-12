@@ -1,8 +1,8 @@
 import Event from '../models/event.model.js';
 // import {uploadOnCloudinary} from '../utils/cloudinary.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { ApiResponse } from '../utils/apiResponse.js';
-import ApiError from '../utils/apiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import ApiError from '../utils/ApiError.js';
 
 export const createEvent = asyncHandler(async (req, res) => {
   console.log("📥 Incoming request body:", req.body);

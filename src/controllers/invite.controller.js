@@ -2,8 +2,8 @@ import Project from '../models/project.model.js';
 import User from '../models/user.model.js';
 import Conversation from '../models/conversation.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { ApiResponse } from '../utils/apiResponse.js';
-import ApiError from '../utils/apiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import ApiError from '../utils/ApiError.js';
 // Function: sendProjectInvitation (from project creator to a user)
 export const sendProjectInvitation = asyncHandler(async (req, res) => {
     const { projectId, userId } = req.params;

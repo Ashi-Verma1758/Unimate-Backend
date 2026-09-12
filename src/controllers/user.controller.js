@@ -47,14 +47,19 @@ export const updateUserProfile = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
 
-    const { name, phone, dob,bio,
-      linkedin, github, university, skills, academicYear } = req.body;
+    const { name, phone, dob, bio,
+      linkedin, github, portfolio, university, skills, academicYear } = req.body;
 
-    if (name) user.name = name;
+    if (name) {
+      const nameParts = name.trim().split(/\s+/).filter(Boolean);
+      user.firstName = nameParts[0] || user.firstName;
+      user.lastName = nameParts.slice(1).join(' ') || user.lastName;
+    }
     if (phone) user.phone = phone;
     if (dob) user.dob = dob;
     if (linkedin) user.linkedin = linkedin;
     if (github) user.github = github;
+    if (portfolio) user.portfolio = portfolio;
     if (university) user.university = university;
     if (skills) user.skills = skills; 
      if (bio) user.bio = bio; 
@@ -67,12 +72,15 @@ export const updateUserProfile = async (req, res) => {
       user: {
         id: updatedUser._id,
         name: updatedUser.name,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
         email: updatedUser.email,
         phone: updatedUser.phone,
         dob: updatedUser.dob,
         bio: updatedUser.bio,
         linkedin: updatedUser.linkedin,
         github: updatedUser.github,
+        portfolio: updatedUser.portfolio,
         university: updatedUser.university,
         skills: updatedUser.skills,
         academicYear: updatedUser.academicYear

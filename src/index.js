@@ -7,9 +7,11 @@ import connectDB from './db/index.js';
 import http from 'http';
 import { Server } from 'socket.io';
 import { initializeJwtSecrets } from './config/jwt.config.js';
+import { getAccessSecret } from './config/jwt.config.js';
 import Conversation from './models/conversation.model.js';
 import Message from './models/message.model.js';
 import Project from './models/project.model.js';
+import jwt from 'jsonwebtoken';
 
 initializeJwtSecrets(process.env.ACCESS_TOKEN_SECRET, process.env.REFRESH_TOKEN_SECRET);
 
@@ -23,6 +25,22 @@ const io = new Server(server, {
 });
 
 app.set('io', io);
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+
+  try {
+    const decoded = jwt.verify(token, getAccessSecret());
+    socket.userId = decoded.id;
+    return next();
+  } catch (error) {
+    return next(new Error('Invalid or expired token'));
+  }
+});
 
 const getProjectTeamIds = (project) => {
   const memberIds = new Set();
@@ -49,8 +67,15 @@ const getProjectTeamIds = (project) => {
 io.on('connection', (socket) => {
   console.log('📡 New user connected:', socket.id);
 
-  const handleJoinConversation = (conversationId) => {
+  const handleJoinConversation = async (conversationId) => {
     if (!conversationId) return;
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      members: socket.userId,
+    });
+
+    if (!conversation) return;
     socket.join(conversationId);
     console.log(`User joined room: ${conversationId}`);
   };
@@ -58,7 +83,8 @@ io.on('connection', (socket) => {
   socket.on('joinRoom', ({ conversationId }) => handleJoinConversation(conversationId));
   socket.on('joinConversation', (conversationId) => handleJoinConversation(conversationId));
 
-  socket.on('sendMessage', async ({ conversationId, sender, text }) => {
+  socket.on('sendMessage', async ({ conversationId, text }) => {
+    const sender = socket.userId;
     if (!conversationId || !sender || !text?.trim()) return;
 
     try {

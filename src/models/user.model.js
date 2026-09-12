@@ -40,6 +40,7 @@ bio:{type:String,
 
   linkedin: String,
   github: String,
+  portfolio: String,
   college: String,
   skills: [String],
 

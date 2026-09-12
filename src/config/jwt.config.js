@@ -12,7 +12,6 @@ export const initializeJwtSecrets = (accessSecret, refreshSecret) => {
     }
     _ACCESS_SECRET = accessSecret;
     _REFRESH_SECRET = refreshSecret;
-    console.log('--- JWT Secrets Initialized (jwt.config.js callback): Secrets are now set.');
 };
 
 export const getAccessSecret = () => {
@@ -31,6 +30,3 @@ export const getRefreshSecret = () => {
     return _REFRESH_SECRET;
 };
 
-// This log will STILL show undefined on initial module load because initializeJwtSecrets hasn't run yet.
-// This is expected and harmless now, as secrets are retrieved via getters later.
-console.log('--- DEBUGGING: ACCESS_TOKEN_SECRET value in jwt.config.js when loaded (initial):', process.env.ACCESS_TOKEN_SECRET);
